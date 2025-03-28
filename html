@@ -97,8 +97,8 @@
     <!-- Seção de Rolagem de Dados -->
     <section id="dice-rolling">
       <h2>Rolagem de Dados</h2>
-      <button onclick="rollDice('d20')">Rolar D20</button>
-      <button onclick="rollDice('d100')">Rolar D100 (HP)</button>
+      <button id="btnD20">Rolar D20</button>
+      <button id="btnD100">Rolar D100 (HP)</button>
       <div id="diceResult" class="result"></div>
     </section>
 
@@ -109,7 +109,7 @@
         Digite a porcentagem de lombra (1-99):
         <input type="number" id="lombraInput" min="1" max="99">
       </label>
-      <button onclick="calcularLombra()">Calcular Lombra</button>
+      <button id="btnLombra">Calcular Lombra</button>
       <div id="lombraResult" class="result"></div>
     </section>
 
@@ -134,216 +134,230 @@
         Modificador (Força ou Destreza, conforme a arma):
         <input type="number" id="attrMod" value="0">
       </label>
-      <button onclick="rollWeapon()">Rolar Dano da Arma</button>
+      <button id="btnWeapon">Rolar Dano da Arma</button>
       <div id="weaponResult" class="result"></div>
       <div id="weaponDetails" class="result"></div>
     </section>
   </main>
 
   <script>
-    // Criação de Personagem e armazenamento offline via localStorage
-    document.getElementById('characterForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const name = document.getElementById('charName').value;
-      const forca = document.getElementById('forca').value;
-      const destreza = document.getElementById('destreza').value;
-      const inteligencia = document.getElementById('inteligencia').value;
-      const carisma = document.getElementById('carisma').value;
-      const couro = document.getElementById('couro').value;
+    document.addEventListener("DOMContentLoaded", function() {
+      // Criação de Personagem e armazenamento offline via localStorage
+      document.getElementById('characterForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const name = document.getElementById('charName').value;
+        const forca = document.getElementById('forca').value;
+        const destreza = document.getElementById('destreza').value;
+        const inteligencia = document.getElementById('inteligencia').value;
+        const carisma = document.getElementById('carisma').value;
+        const couro = document.getElementById('couro').value;
 
-      const profileHTML = `<h3>Perfil de ${name}</h3>
-                           <p>Força: ${forca}</p>
-                           <p>Destreza: ${destreza}</p>
-                           <p>Inteligência: ${inteligencia}</p>
-                           <p>Carisma: ${carisma}</p>
-                           <p>Couro: ${couro}</p>
-                           <h4>Perícias</h4>
-                           <ul>
-                             <li><strong>Força:</strong> Parrudão, Courudo, Bógue</li>
-                             <li><strong>Destreza:</strong> Capela, Tisconde, Robalris</li>
-                             <li><strong>Intelecto:</strong> Indagar, Atinar, Mexiricar, Curar, Macumba</li>
-                             <li><strong>Carisma:</strong> Disdobro, Diplomacia, Nó cego, Botar Pânico</li>
-                           </ul>`;
-      document.getElementById('characterProfile').innerHTML = profileHTML;
-      
-      const character = { name, forca, destreza, inteligencia, carisma, couro };
-      localStorage.setItem('character', JSON.stringify(character));
+        const profileHTML = `<h3>Perfil de ${name}</h3>
+                             <p>Força: ${forca}</p>
+                             <p>Destreza: ${destreza}</p>
+                             <p>Inteligência: ${inteligencia}</p>
+                             <p>Carisma: ${carisma}</p>
+                             <p>Couro: ${couro}</p>
+                             <h4>Perícias</h4>
+                             <ul>
+                               <li><strong>Força:</strong> Parrudão, Courudo, Bógue</li>
+                               <li><strong>Destreza:</strong> Capela, Tisconde, Robalris</li>
+                               <li><strong>Intelecto:</strong> Indagar, Atinar, Mexiricar, Curar, Macumba</li>
+                               <li><strong>Carisma:</strong> Disdobro, Diplomacia, Nó cego, Botar Pânico</li>
+                             </ul>`;
+        document.getElementById('characterProfile').innerHTML = profileHTML;
+        
+        const character = { name, forca, destreza, inteligencia, carisma, couro };
+        localStorage.setItem('character', JSON.stringify(character));
+      });
+
+      // Função de rolagem de dados básicos
+      function rollDice(dice) {
+        let result;
+        if (dice === 'd20') {
+          result = Math.floor(Math.random() * 20) + 1;
+        } else if (dice === 'd100') {
+          result = Math.floor(Math.random() * 100) + 1;
+        }
+        document.getElementById('diceResult').innerText = `Resultado de ${dice}: ${result}`;
+      }
+
+      // Função para o sistema de Lombra
+      function calcularLombra() {
+        let perc = document.getElementById('lombraInput').value;
+        if (perc < 1 || perc > 99) {
+          document.getElementById('lombraResult').innerText = "Porcentagem deve ser entre 1 e 99.";
+          return;
+        }
+        // Soma dos dígitos da porcentagem
+        let digits = perc.toString().split('');
+        let bonus = digits.reduce((sum, digit) => sum + parseInt(digit), 0);
+        document.getElementById('lombraResult').innerText = `Lombra usada: ${perc}%. Bônus obtido: ${bonus}. Custo: ${perc}% do recurso.`;
+      }
+
+      // Função para rolar N dados de X faces (ex: 4d8)
+      function rollNdX(n, x) {
+        let total = 0;
+        let rolls = [];
+        for (let i = 0; i < n; i++) {
+          let r = Math.floor(Math.random() * x) + 1;
+          rolls.push(r);
+          total += r;
+        }
+        return { total, rolls };
+      }
+
+      // Dados das armas conforme especificado
+      const weapons = {
+        porrete: {
+          nome: "PORRETE DE AÇO FUNDIDO",
+          tipo: "Arma curta distância",
+          peso: "2,5 kg",
+          dano: { qtd: 4, dice: 8 },
+          critico: 18,
+          atributo: "forca"
+        },
+        clava: {
+          nome: "CLAVA ESPINHOSA",
+          tipo: "Arma média distância",
+          peso: "4 kg",
+          dano: { qtd: 2, dice: 12 },
+          bonus: { qtd: 1, dice: 4, descricao: "dano de perfuração" },
+          critico: 19,
+          atributo: "destreza"
+        },
+        machado: {
+          nome: "MACHADO DE BOMBEIRO",
+          tipo: "Arma curta distância",
+          peso: "Leve",
+          dano: { qtd: 2, dice: 10 },
+          critico: 18,
+          atributo: "forca"
+        },
+        espadaBankai: {
+          nome: "ESPADA BANKAI LONGA",
+          tipo: "Arma média distância",
+          peso: "4,9 kg",
+          dano: { qtd: 3, dice: 8 },
+          bonus: { qtd: 3, dice: 6, descricao: "dano de corte, perfuração e infecção (somente com lâmina contaminada)" },
+          critico: 18,
+          atributo: "destreza"
+        },
+        socoSerralheria: {
+          nome: "SOCO DE SERRALHERIA",
+          tipo: "Arma corpo a corpo",
+          peso: "1,2 kg",
+          dano: { qtd: 3, dice: 8 },
+          bonus: { qtd: 3, dice: 6, descricao: "dano de corte bruto" },
+          extra: { qtd: 1, dice: 4, descricao: "sangramento" },
+          critico: 18,
+          atributo: "forca"
+        },
+        espadaRasga: {
+          nome: "ESPADA RASGA - MÃE",
+          tipo: "Arma média distância",
+          peso: "3,5 kg",
+          dano: { qtd: 5, dice: 8 },
+          bonus: { qtd: 3, dice: 6, descricao: "dano de corte bruto" },
+          extra: { qtd: 2, dice: 4, descricao: "perfuração (usando espinho do soco inglês) e sangramento" },
+          critico: 18,
+          atributo: "destreza"
+        },
+        arco: {
+          nome: "ARCO E FLECHA",
+          tipo: "Arma longa distância",
+          peso: "1,5 kg",
+          dano: { qtd: 4, dice: 9 },
+          bonus: { descricao: "Se tiver flecha personalizada, soma dano da flecha; senão, 1d6 de perfuração" },
+          critico: 17,
+          atributo: "destreza"
+        },
+        fal: {
+          nome: "F.A.L = FALCÃO ANTIGOLEVE",
+          tipo: "Arma de fogo - longo alcance",
+          peso: "6,5 kg",
+          munição: "2 tiros (recarregar consome uma ação por bala)",
+          dano: { qtd: 2, dice: 20 },
+          bonus: { qtd: 1, dice: 6, descricao: "dano de perfuração (com baioneta)" },
+          bayonet: { qtd: 3, dice: 6, atributo: "forca", descricao: "bayoneta adaptada" },
+          critico: 19,
+          atributo: "destreza"
+        },
+        foices: {
+          nome: "FOICES DA LUA",
+          tipo: "Arma corpo a corpo",
+          peso: "1,2 kg",
+          dano: { qtd: 4, dice: 6 },
+          bonus: { qtd: 3, dice: 8, descricao: "dano de corte bruto" },
+          extra: { qtd: 1, dice: 4, descricao: "sangramento" },
+          critico: 18,
+          atributo: "forca"
+        }
+      };
+
+      // Função para rolar dano de arma selecionada
+      function rollWeapon() {
+        const selected = document.getElementById('weaponSelect').value;
+        const mod = parseInt(document.getElementById('attrMod').value) || 0;
+        const weapon = weapons[selected];
+        let resultHTML = `<h3>${weapon.nome}</h3>
+                          <p>Tipo: ${weapon.tipo} | Peso: ${weapon.peso}</p>`;
+        // Rolagem do dano base
+        let baseRoll = rollNdX(weapon.dano.qtd, weapon.dano.dice);
+        resultHTML += `<p>Dano base ( ${weapon.dano.qtd}d${weapon.dano.dice} ): [${baseRoll.rolls.join(', ')}] → Total: ${baseRoll.total}</p>`;
+        let totalDamage = baseRoll.total + mod;
+        resultHTML += `<p>Modificador (${weapon.atributo}): ${mod}</p>`;
+        
+        // Rolagem do bônus, se houver
+        if (weapon.bonus && weapon.bonus.dice) {
+          let bonusRoll = rollNdX(weapon.bonus.qtd, weapon.bonus.dice);
+          resultHTML += `<p>Bônus (${weapon.bonus.descricao}): [${bonusRoll.rolls.join(', ')}] → Total: ${bonusRoll.total}</p>`;
+          totalDamage += bonusRoll.total;
+        } else if (weapon.bonus && !weapon.bonus.dice) {
+          resultHTML += `<p>Bônus: ${weapon.bonus.descricao}</p>`;
+        }
+        // Rolagem de dano extra, se existir
+        if (weapon.extra) {
+          let extraRoll = rollNdX(weapon.extra.qtd, weapon.extra.dice);
+          resultHTML += `<p>Extra (${weapon.extra.descricao}): [${extraRoll.rolls.join(', ')}] → Total: ${extraRoll.total}</p>`;
+          totalDamage += extraRoll.total;
+        }
+        // Caso da F.A.L, possibilita o uso opcional da bayoneta adaptada
+        if (selected === 'fal') {
+          resultHTML += `<p>Opcional: Para usar Bayoneta Adaptada, clique no botão abaixo.</p>
+                         <button id="btnBayonet">Usar Bayoneta Adaptada</button>`;
+        }
+        resultHTML += `<p><strong>Dano Total: ${totalDamage}</strong></p>`;
+        resultHTML += `<p>Crítico: ${weapon.critico}</p>`;
+        document.getElementById('weaponResult').innerHTML = resultHTML;
+        document.getElementById('weaponDetails').innerHTML = "";
+
+        // Adiciona o listener para o botão de bayoneta, se existir
+        const bayonetBtn = document.getElementById('btnBayonet');
+        if (bayonetBtn) {
+          bayonetBtn.addEventListener('click', rollBayonet);
+        }
+      }
+
+      // Função para rolar dano da bayoneta adaptada da F.A.L
+      function rollBayonet() {
+        const mod = parseInt(document.getElementById('attrMod').value) || 0;
+        const weapon = weapons['fal'];
+        let bayonetRoll = rollNdX(weapon.bayonet.qtd, weapon.bayonet.dice);
+        let resultHTML = `<h3>${weapon.nome} - Bayoneta Adaptada</h3>`;
+        resultHTML += `<p>Roladas: [${bayonetRoll.rolls.join(', ')}] → Total: ${bayonetRoll.total}</p>`;
+        resultHTML += `<p>Modificador (${weapon.bayonet.atributo}): ${mod}</p>`;
+        let totalDamage = bayonetRoll.total + mod;
+        resultHTML += `<p><strong>Dano Total com Bayoneta: ${totalDamage}</strong></p>`;
+        document.getElementById('weaponDetails').innerHTML = resultHTML;
+      }
+
+      // Associa os botões aos seus respectivos eventos
+      document.getElementById('btnD20').addEventListener('click', () => rollDice('d20'));
+      document.getElementById('btnD100').addEventListener('click', () => rollDice('d100'));
+      document.getElementById('btnLombra').addEventListener('click', calcularLombra);
+      document.getElementById('btnWeapon').addEventListener('click', rollWeapon);
     });
-
-    // Função de rolagem de dados básicos
-    function rollDice(dice) {
-      let result;
-      if (dice === 'd20') {
-        result = Math.floor(Math.random() * 20) + 1;
-      } else if (dice === 'd100') {
-        result = Math.floor(Math.random() * 100) + 1;
-      }
-      document.getElementById('diceResult').innerText = `Resultado de ${dice}: ${result}`;
-    }
-
-    // Função para o sistema de Lombra
-    function calcularLombra() {
-      let perc = document.getElementById('lombraInput').value;
-      if (perc < 1 || perc > 99) {
-        document.getElementById('lombraResult').innerText = "Porcentagem deve ser entre 1 e 99.";
-        return;
-      }
-      // Soma dos dígitos da porcentagem
-      let digits = perc.toString().split('');
-      let bonus = digits.reduce((sum, digit) => sum + parseInt(digit), 0);
-      document.getElementById('lombraResult').innerText = `Lombra usada: ${perc}%. Bônus obtido: ${bonus}. Custo: ${perc}% do recurso.`;
-    }
-
-    // Função para rolar N dados de X faces (ex: 4d8)
-    function rollNdX(n, x) {
-      let total = 0;
-      let rolls = [];
-      for (let i = 0; i < n; i++) {
-        let r = Math.floor(Math.random() * x) + 1;
-        rolls.push(r);
-        total += r;
-      }
-      return { total, rolls };
-    }
-
-    // Dados das armas conforme especificado
-    const weapons = {
-      porrete: {
-        nome: "PORRETE DE AÇO FUNDIDO",
-        tipo: "Arma curta distância",
-        peso: "2,5 kg",
-        dano: { qtd: 4, dice: 8 },
-        critico: 18,
-        atributo: "forca"
-      },
-      clava: {
-        nome: "CLAVA ESPINHOSA",
-        tipo: "Arma média distância",
-        peso: "4 kg",
-        dano: { qtd: 2, dice: 12 },
-        bonus: { qtd: 1, dice: 4, descricao: "dano de perfuração" },
-        critico: 19,
-        atributo: "destreza"
-      },
-      machado: {
-        nome: "MACHADO DE BOMBEIRO",
-        tipo: "Arma curta distância",
-        peso: "Leve",
-        dano: { qtd: 2, dice: 10 },
-        critico: 18,
-        atributo: "forca"
-      },
-      espadaBankai: {
-        nome: "ESPADA BANKAI LONGA",
-        tipo: "Arma média distância",
-        peso: "4,9 kg",
-        dano: { qtd: 3, dice: 8 },
-        bonus: { qtd: 3, dice: 6, descricao: "dano de corte, perfuração e infecção (somente com lâmina contaminada)" },
-        critico: 18,
-        atributo: "destreza"
-      },
-      socoSerralheria: {
-        nome: "SOCO DE SERRALHERIA",
-        tipo: "Arma corpo a corpo",
-        peso: "1,2 kg",
-        dano: { qtd: 3, dice: 8 },
-        bonus: { qtd: 3, dice: 6, descricao: "dano de corte bruto" },
-        extra: { qtd: 1, dice: 4, descricao: "sangramento" },
-        critico: 18,
-        atributo: "forca"
-      },
-      espadaRasga: {
-        nome: "ESPADA RASGA - MÃE",
-        tipo: "Arma média distância",
-        peso: "3,5 kg",
-        dano: { qtd: 5, dice: 8 },
-        bonus: { qtd: 3, dice: 6, descricao: "dano de corte bruto" },
-        extra: { qtd: 2, dice: 4, descricao: "perfuração (usando espinho do soco inglês) e sangramento" },
-        critico: 18,
-        atributo: "destreza"
-      },
-      arco: {
-        nome: "ARCO E FLECHA",
-        tipo: "Arma longa distância",
-        peso: "1,5 kg",
-        dano: { qtd: 4, dice: 9 },
-        bonus: { descricao: "Se tiver flecha personalizada, soma dano da flecha; senão, 1d6 de perfuração" },
-        critico: 17,
-        atributo: "destreza"
-      },
-      fal: {
-        nome: "F.A.L = FALCÃO ANTIGOLEVE",
-        tipo: "Arma de fogo - longo alcance",
-        peso: "6,5 kg",
-        munição: "2 tiros (recarregar consome uma ação por bala)",
-        dano: { qtd: 2, dice: 20 },
-        bonus: { qtd: 1, dice: 6, descricao: "dano de perfuração (com baioneta)" },
-        bayonet: { qtd: 3, dice: 6, atributo: "forca", descricao: "bayoneta adaptada" },
-        critico: 19,
-        atributo: "destreza"
-      },
-      foices: {
-        nome: "FOICES DA LUA",
-        tipo: "Arma corpo a corpo",
-        peso: "1,2 kg",
-        dano: { qtd: 4, dice: 6 },
-        bonus: { qtd: 3, dice: 8, descricao: "dano de corte bruto" },
-        extra: { qtd: 1, dice: 4, descricao: "sangramento" },
-        critico: 18,
-        atributo: "forca"
-      }
-    };
-
-    // Função para rolar dano de arma selecionada
-    function rollWeapon() {
-      const selected = document.getElementById('weaponSelect').value;
-      const mod = parseInt(document.getElementById('attrMod').value) || 0;
-      const weapon = weapons[selected];
-      let resultHTML = `<h3>${weapon.nome}</h3>
-                        <p>Tipo: ${weapon.tipo} | Peso: ${weapon.peso}</p>`;
-      // Rolagem do dano base
-      let baseRoll = rollNdX(weapon.dano.qtd, weapon.dano.dice);
-      resultHTML += `<p>Dano base ( ${weapon.dano.qtd}d${weapon.dano.dice} ): [${baseRoll.rolls.join(', ')}] → Total: ${baseRoll.total}</p>`;
-      let totalDamage = baseRoll.total + mod;
-      resultHTML += `<p>Modificador (${weapon.atributo}): ${mod}</p>`;
-      
-      // Rolagem do bônus, se houver
-      if (weapon.bonus && weapon.bonus.dice) {
-        let bonusRoll = rollNdX(weapon.bonus.qtd, weapon.bonus.dice);
-        resultHTML += `<p>Bônus (${weapon.bonus.descricao}): [${bonusRoll.rolls.join(', ')}] → Total: ${bonusRoll.total}</p>`;
-        totalDamage += bonusRoll.total;
-      } else if (weapon.bonus && !weapon.bonus.dice) {
-        resultHTML += `<p>Bônus: ${weapon.bonus.descricao}</p>`;
-      }
-      // Rolagem de dano extra, se existir
-      if (weapon.extra) {
-        let extraRoll = rollNdX(weapon.extra.qtd, weapon.extra.dice);
-        resultHTML += `<p>Extra (${weapon.extra.descricao}): [${extraRoll.rolls.join(', ')}] → Total: ${extraRoll.total}</p>`;
-        totalDamage += extraRoll.total;
-      }
-      // Caso da F.A.L, possibilita o uso opcional da bayoneta adaptada
-      if (selected === 'fal') {
-        resultHTML += `<p>Opcional: Para usar Bayoneta Adaptada, clique no botão abaixo.</p>
-                       <button onclick="rollBayonet()">Usar Bayoneta Adaptada</button>`;
-      }
-      resultHTML += `<p><strong>Dano Total: ${totalDamage}</strong></p>`;
-      resultHTML += `<p>Crítico: ${weapon.critico}</p>`;
-      document.getElementById('weaponResult').innerHTML = resultHTML;
-      document.getElementById('weaponDetails').innerHTML = "";
-    }
-
-    // Função para rolar dano da bayoneta adaptada da F.A.L
-    function rollBayonet() {
-      const mod = parseInt(document.getElementById('attrMod').value) || 0;
-      const weapon = weapons['fal'];
-      let bayonetRoll = rollNdX(weapon.bayonet.qtd, weapon.bayonet.dice);
-      let resultHTML = `<h3>${weapon.nome} - Bayoneta Adaptada</h3>`;
-      resultHTML += `<p>Roladas: [${bayonetRoll.rolls.join(', ')}] → Total: ${bayonetRoll.total}</p>`;
-      resultHTML += `<p>Modificador (${weapon.bayonet.atributo}): ${mod}</p>`;
-      let totalDamage = bayonetRoll.total + mod;
-      resultHTML += `<p><strong>Dano Total com Bayoneta: ${totalDamage}</strong></p>`;
-      document.getElementById('weaponDetails').innerHTML = resultHTML;
-    }
   </script>
 </body>
 </html>
